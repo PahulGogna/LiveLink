@@ -1,0 +1,9 @@
+/venv
+__pycache__
+backEnd/config.py
+backEnd/models.py
+backEnd/database.py
+backEnd/OAuth.py
+backEnd/Schemas.py
+backEnd/users.py
+backEnd/utils.py
