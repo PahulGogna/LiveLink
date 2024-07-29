@@ -1,7 +1,5 @@
 import requests
-import time
-import Kafka
-import threading
+import json
 
 codes = {
     "100": "Continue",
@@ -70,97 +68,114 @@ codes = {
 }
 
 
-class Checker:
-    def __init__(self) -> None:
+def getStatusCodeData(url) -> dict:
+    if 'https://' not in url:
+        url = 'https://' + url
+    try:
+        data = requests.head(url, allow_redirects=True).status_code
+
+        if data >= 400 and data <= 599:
+            return {'url':url, 'status_code': data, 'exception':False, 'working':False, 'running': True, 'error': None}
+        else:    
+            return {'url':url, 'status_code': data, 'exception':False, 'working':True, 'running': True, 'error': None}
+    except Exception as error:
+        return {'url':url, 'status_code':0, 'exception':True, 'error':error.__str__(), 'working':False, 'running': False}
+
+
+
+
+
+# class Checker:
+#     def __init__(self) -> None:
         
-        self.processes = {}
+#         self.processes = {}
         
-    def _getStatusCode(self,url:str,event:threading.Event, TimeInterval:int = 30) -> None:
-        '''
-        This is the status code monitoring process which runs in an infinite loop until stopped.
-        '''
-        print('starting...')
-        producer = Kafka.Producer(topic='StatusCodes',key=url)
-        dt = 0
-        LoggingInterval = TimeInterval*5
-        try:
-            data = requests.head(url, allow_redirects=True).status_code
+#     def _getStatusCode(self,url:str,event:threading.Event, TimeInterval:int = 30) -> None:
+#         '''
+#         This is the status code monitoring process which runs in an infinite loop until stopped.
+#         '''
+#         print('starting...')
+#         producer = Kafka.Producer(topic='StatusCodes',key=url)
+#         dt = 0
+#         LoggingInterval = TimeInterval*5
+#         try:
+#             data = requests.head(url, allow_redirects=True).status_code
 
-            if data >= 400 and data <= 599:
-                    producer.produce({'url':url, 'status_code': data, 'exception':False, 'working':False, 'stopped': False})
-                    dt = 0
-                    time.sleep(TimeInterval)
-            else:    
-                producer.produce({'url':url, 'status_code': data, 'exception':False, 'working':True, 'stopped': False})
-        except Exception as error:
-            return error
+#             if data >= 400 and data <= 599:
+#                     producer.produce({'url':url, 'status_code': data, 'exception':False, 'working':False, 'stopped': False})
+#                     dt = 0
+#                     time.sleep(TimeInterval)
+#             else:    
+#                 producer.produce({'url':url, 'status_code': data, 'exception':False, 'working':True, 'stopped': False})
+#         except Exception as error:
+#             return error
 
-        while not event.is_set():
-            try:
-                data = requests.head(url, allow_redirects=True).status_code
-                print(codes[str(data)])
+#         while not event.is_set():
+#             try:
+#                 data = requests.head(url, allow_redirects=True).status_code
+#                 print(codes[str(data)])
 
-                if data >= 400 and data <= 599:
-                    producer.produce({'url':url, 'status_code': data, 'exception':False, 'working':False, 'stopped': False})
-                    dt = 0
-                    time.sleep(TimeInterval)
-                    continue
+#                 if data >= 400 and data <= 599:
+#                     producer.produce({'url':url, 'status_code': data, 'exception':False, 'working':False, 'stopped': False})
+#                     dt = 0
+#                     time.sleep(TimeInterval)
+#                     continue
 
-                if dt >= LoggingInterval:
-                    producer.produce({'url':url, 'status_code': data, 'exception':False, 'working':True, 'stopped': False})
-                    dt = 0
+#                 if dt >= LoggingInterval:
+#                     producer.produce({'url':url, 'status_code': data, 'exception':False, 'working':True, 'stopped': False})
+#                     dt = 0
                 
 
-            except Exception as error:
-                print(error)
-                print('stopping for an extra of 10 seconds...')
-                producer.produce({'url':url, 'status_code':None, 'exception':True, 'error':error, 'working':False, 'stopped': False})
-                dt = 0
-                time.sleep(10)
+#             except Exception as error:
+#                 print(error)
+#                 print('stopping for an extra of 10 seconds...')
+#                 producer.produce({'url':url, 'status_code':None, 'exception':True, 'error':error, 'working':False, 'stopped': False})
+#                 dt = 0
+#                 time.sleep(10)
                 
-            time.sleep(TimeInterval)
-            dt += TimeInterval
+#             time.sleep(TimeInterval)
+#             dt += TimeInterval
 
-        producer.produce(data={'url':url, 'status_code': data, 'exception':False, 'working':True, 'stopped': True})
+#         producer.produce(data={'url':url, 'status_code': data, 'exception':False, 'working':True, 'stopped': True})
 
-        return
+#         return
 
-    def startAnother(self, url:str, timeInterval=30):
-        '''
-        This is to start a new status code monitoring process which runs in an infinite loop.
-        '''
-        if url not in self.processes:
-            event = threading.Event()
-            self.processes[url] = {
-                'thread':threading.Thread(target=self._getStatusCode,
-                                          args=(url, event,timeInterval)).start(),
-                'event':event
-                }
+#     def startAnother(self, url:str, timeInterval=30):
+#         '''
+#         This is to start a new status code monitoring process which runs in an infinite loop.
+#         '''
+#         if url not in self.processes:
+#             event = threading.Event()
+#             self.processes[url] = {
+#                 'thread':threading.Thread(target=self._getStatusCode,
+#                                           args=(url, event,timeInterval)).start(),
+#                 'event':event
+#                 }
     
-    def stopChecking(self,url):
-        if url in self.processes:
-            threadData = self.processes[url]
-            threadData['event'].set()
-            print(threadData, 'was stopped.')
-            del self.processes[url]
-            print(self.processes)
+#     def stopChecking(self,url):
+#         if url in self.processes:
+#             threadData = self.processes[url]
+#             threadData['event'].set()
+#             print(threadData, 'was stopped.')
+#             del self.processes[url]
+#             print(self.processes)
 
-        elif url == 'ALL':
-            for p in self.processes:
-                process = self.processes[p]
-                process['event'].set()
-                print(process, 'was stopped.')
-                del process
-            return
+#         elif url == 'ALL':
+#             for p in self.processes:
+#                 process = self.processes[p]
+#                 process['event'].set()
+#                 print(process, 'was stopped.')
+#                 del process
+#             return
             
 
 
-c1 = Checker()
-c1.startAnother("https://spotify-playlists-lemon.vercel.app", 2)
-time.sleep(5)
-c1.startAnother("https://www.google.com/", 2)
+# c1 = Checker()
+# c1.startAnother("https://spotify-playlists-lemon.vercel.app", 2)
+# time.sleep(5)
+# c1.startAnother("https://www.google.com/", 2)
 
 
-input('enter to stop')
+# input('enter to stop')
 
-c1.stopChecking('ALL')
+# c1.stopChecking('ALL')
