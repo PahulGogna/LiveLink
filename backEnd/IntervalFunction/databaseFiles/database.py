@@ -1,17 +1,17 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
-from config import config
+# from  databaseFiles.config import config
 from contextlib import contextmanager
+import os
 
 try:
-    # DATABASE_URL = os.environ['POSTGRES_URL']
-    DATABASE_URL = config.get('POSTGRES_URL')
-    # print(DATABASE_URL)
+    DATABASE_URL = os.environ.get('ODBC_SQL_URL')
+    # DATABASE_URL = config.get('ODBC_SQL_URL')
 except Exception as e:
     raise e
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine('mssql+pyodbc:///?odbc_connect={}'.format(DATABASE_URL))
 
 sessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 

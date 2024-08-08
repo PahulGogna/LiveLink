@@ -1,4 +1,4 @@
-from database import Base
+from databaseFiles.database import Base
 from sqlalchemy import Column, Integer,String,Sequence,ARRAY, Boolean, ForeignKey
 
 class Users(Base):
@@ -7,7 +7,6 @@ class Users(Base):
     name = Column("name",String, nullable=False)
     email = Column("email",String, nullable = False)
     password = Column("password",String, nullable= False)
-    posts = Column("posts", ARRAY(Integer), default = [])
 
 class Link(Base):
     __tablename__ = "links"
@@ -19,3 +18,6 @@ class Link(Base):
     running = Column('running', Boolean, default=False)
     exception = Column('exception', Boolean, default=False)
     error = Column('error', String, nullable=True)
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}

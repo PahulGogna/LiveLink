@@ -1,6 +1,3 @@
-import requests
-import json
-
 codes = {
     "100": "Continue",
     "101": "Switching Protocols",
